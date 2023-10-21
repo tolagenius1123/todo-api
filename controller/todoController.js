@@ -1,80 +1,99 @@
-// const contacts = [
-// 	{
-// 		name: "Omotola",
-// 		phoneNumber: "07189455902",
-// 	},
-// 	{
-// 		name: "James",
-// 		phoneNumber: "07189455902",
-// 	},
-// 	{
-// 		name: "Cynthia",
-// 		phoneNumber: "07189455902",
-// 	},
-// 	{
-// 		name: "Gabriel",
-// 		phoneNumber: "07189455902",
-// 	},
-// 	{
-// 		name: "Joyce",
-// 		phoneNumber: "07189455902",
-// 	},
-// ];
 import Todo from "../model/todoModel.js";
+import asyncHandler from "express-async-handler";
 
-export const getAllTodos = async (req, res) => {
+export const getAllTodos = asyncHandler(async (req, res) => {
 	console.log(`${req.method} request was made`);
 	const todos = await Todo.find();
 
 	if (todos) {
 		res.status(200).json(todos);
 	}
-};
+});
 
-export const addTodo = async (req, res) => {
+export const addTodo = asyncHandler(async (req, res) => {
 	console.log(`${req.method} request was made`);
 
 	const { todo } = req.body;
 
 	if (!todo) {
-		res.status(400).json({ message: "All fields are required" });
+		res.status(400);
+		throw new Error("All fields are required");
 	}
 
-	const newTodo = new Todo({ todo });
-
 	try {
-		const savedTodo = await newTodo.save();
+		const savedTodo = await Todo.create({ todo });
 
 		if (savedTodo) {
-			return res.status(200).json({ message: "todo saved successfully" });
+			return res
+				.status(200)
+				.json({ savedTodo, message: "todo saved successfully" });
 		}
 	} catch (error) {
 		console.error(error);
-		return res.status(500).json({ message: "Internal Server Error" });
+		res.status(500);
+		throw new Error("Internal Server Error");
 	}
-};
+});
 
-export const updateTodo = async (req, res) => {
+export const updateTodo = asyncHandler(async (req, res) => {
 	console.log(`${req.method} request was made`);
 
-	const { id } = req.params;
-	res.status(200).json({
-		message: `todo with id ${id} was updated successfully`,
-	});
-};
+	const id = req.params.id;
 
-export const deleteTodo = async (req, res) => {
-	console.log(`${req.method} request was made`);
-	const { id } = req.params;
-	res.status(200).json({
-		message: `todo with id ${id} was deleted successfully`,
-	});
-};
+	const foundTodo = await Todo.findById(id);
 
-export const getTodo = async (req, res) => {
+	if (!foundTodo) {
+		res.status(404);
+		throw new Error("Todo not found");
+	}
+
+	try {
+		const updatedTodo = await Todo.findByIdAndUpdate(id, req.body, {
+			new: true,
+		});
+		res.status(200).json({
+			updatedTodo,
+			message: "Todo was updated successfully",
+		});
+	} catch (error) {
+		res.status(500);
+		throw new Error("Internal Server Error");
+	}
+});
+
+export const deleteTodo = asyncHandler(async (req, res) => {
 	console.log(`${req.method} request was made`);
-	const { id } = req.params;
-	res.status(200).json({
-		message: `todo with id ${id} was found successfully`,
-	});
-};
+
+	const id = req.params.id;
+
+	const foundTodo = await Todo.findById(id);
+
+	if (!foundTodo) {
+		res.status(404);
+		throw new Error("Todo not found");
+	}
+
+	try {
+		await Todo.deleteOne({ _id: id });
+		res.status(200).json({
+			message: "Todo was deleted successfully",
+		});
+	} catch (error) {
+		res.status(500);
+		throw new Error("Internal Server Error");
+	}
+});
+
+export const getTodo = asyncHandler(async (req, res) => {
+	console.log(`${req.method} request was made`);
+	const id = req.params.id;
+
+	const foundTodo = await Todo.findById(id);
+
+	if (!foundTodo) {
+		res.status(404);
+		throw new Error("Todo not found");
+	}
+
+	res.status(200).json(foundTodo);
+});
